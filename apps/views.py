@@ -2,12 +2,13 @@ import logging
 
 from django.core.cache import cache
 from drf_spectacular.utils import extend_schema
+from rest_framework import status
 from rest_framework.generics import CreateAPIView, ListAPIView, GenericAPIView
 from rest_framework.response import Response
 
 from apps.models import User
 from apps.serializers import UserCreateSerializer, EmailModelSerializer, \
-    VerifyModelSerializer
+    VerifyModelSerializer, UserListSerializer, ForgetPasswordSerializer
 from apps.tasks import send_code_to_email
 from apps.utils import sms_code
 
@@ -23,9 +24,21 @@ class UserCreateApiView(CreateAPIView):
 @extend_schema(tags=['Users'])
 class UserListAPIView(ListAPIView):
     queryset = User.objects.all()
-    serializer_class = UserCreateSerializer
+    serializer_class = UserListSerializer
 
 
+@extend_schema(tags=['Auth'])
+class ForgetPasswordGenericAPIView(GenericAPIView):
+    serializer_class = ForgetPasswordSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data.get('email')
+        return Response({f'Sizning {email} sms yuborildi'}, status=status.HTTP_200_OK)
+
+
+@extend_schema(tags=['Auth'])
 class SendEmailAPIView(GenericAPIView):
     serializer_class = EmailModelSerializer
 
@@ -59,6 +72,7 @@ class SendEmailAPIView(GenericAPIView):
         return self.request.user
 
 
+@extend_schema(tags=['Auth'])
 class VerifyEmailAPIView(GenericAPIView):
     serializer_class = VerifyModelSerializer
 
